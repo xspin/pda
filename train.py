@@ -48,7 +48,7 @@ for epoch in range(config.epochs):
         optimizer.step()
         
         # print statistics
-        running_loss += loss.item()
+        running_loss = loss.item()
 #         if (i+1) % 1 == 0: 
         print('[%d, %5d] loss: %.3f' % (epoch+1, i+1, running_loss / 100))
 #             running_loss = 0.0

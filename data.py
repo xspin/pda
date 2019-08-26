@@ -5,10 +5,10 @@ import numpy as np
 from torchvision import transforms
 
 
-def imshow(img):
-    img = img / 2 + 0.5 # unnormalize
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1,2,0)))
+# def imshow(img):
+#     img = img / 2 + 0.5 # unnormalize
+#     npimg = img.numpy()
+#     plt.imshow(np.transpose(npimg, (1,2,0)))
 
 def load_image(path):
     with open(path, 'rb') as f:
