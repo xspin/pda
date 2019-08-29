@@ -24,7 +24,6 @@ config.epochs = 3
 config.batch_size = 16
 config.base_model = 'resnet'
 config.image_size = (256, 256)
-config.classes = 31
 
 src_domain_dir = dataset_dir[src_domain_name]
 tgt_domain_dir = dataset_dir[tgt_domain_name]
