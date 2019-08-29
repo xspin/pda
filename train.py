@@ -14,11 +14,17 @@ def accuracy(y_true, y_pred):
 dataset_amazon_dir = 'datasets/office31/amazon/images'
 dataset_dslr_dir = 'datasets/office31/dslr/images'
 dataset_webcam_dir = 'datasets/office31/webcam/images'
-
 dataset_dir = {'amazon': dataset_amazon_dir, 'dslr': dataset_dslr_dir, 'webcam': dataset_webcam_dir}
 
+#! Modify here to change the source and target domain
 src_domain_name = 'amazon'
 tgt_domain_name = 'dslr'
+
+config.epochs = 3
+config.batch_size = 16
+config.base_model = 'resnet'
+config.image_size = (256, 256)
+config.classes = 31
 
 src_domain_dir = dataset_dir[src_domain_name]
 tgt_domain_dir = dataset_dir[tgt_domain_name]
@@ -59,7 +65,7 @@ criterion_domain = torch.nn.CrossEntropyLoss()
 optimizer_F = torch.optim.Adam(net.feature_extractor.parameters())
 optimizer_D = torch.optim.Adam(net.adversarial_classifier.parameters())
 
-print('Starting training...')
+print('Starting training ...')
 clock_epoch = Clock(config.epochs)
 for epoch in range(config.epochs):
     step = 0
@@ -94,8 +100,7 @@ for epoch in range(config.epochs):
         tgt_acc_lb = accuracy(tgt_labels, tgt_y_label)
         src_acc_dm = accuracy(src_dis_labels, src_y_domain)
         tgt_acc_dm = accuracy(tgt_dis_labels, tgt_y_domain)
-#         if (i+1) % 1 == 0: 
-        # print('Epoch {} Batch {} acc: {} {} loss: {} {} {}'.format(epoch+1, step, acc_lb, acc_dm, losslb, lossdm))
+
         print('\tacc_label {} {}  acc_domain {} {}'.format(src_acc_lb, tgt_acc_lb, src_acc_dm, tgt_acc_dm))
         print('\tloss_label {:.6f}  loss_domain {:.6f} {:.6f}'.format(src_loss_label, tgt_loss_dm, src_loss_dm, tgt_loss_dm))
         tm = clock_batch.toc(step)

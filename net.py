@@ -207,14 +207,14 @@ class NetTest(nn.Module):
         x = F.softmax(self.fc3(x))
         return x
 
-# model_dict = {
-#     'resnet50': ResNet50Fc,
-#     'vgg16': VGG16Fc
-# }
+model_dict = {
+    'resnet': ResNet50Fc,
+    'vgg': VGG16Fc
+}
 class Net(nn.Module):
     def __init__(self, config):
         super(Net, self).__init__()
-        self.feature_extractor = ResNet50Fc()
+        self.feature_extractor = model_dict[config.base_model]()
         self.adversarial_classifier = AdversarialClassifier(self.feature_extractor.output_num(), config.classes*2)
         # classifier_output_dim = config.classes 
         # self.classifier = CLS(self.feature_extractor.output_num(), classifier_output_dim, bottle_neck_dim=256)

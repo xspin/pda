@@ -4,5 +4,6 @@ class Config:
         self.batch_size = 16
         self.epochs = 3
         self.classes = 31
+        self.base_model = 'vgg' # vgg or resnet
 
 config = Config()
