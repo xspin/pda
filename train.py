@@ -5,6 +5,7 @@ from net import Net
 import data
 import numpy as np
 from itertools import cycle
+from timer import Clock
 
 def accuracy(y_true, y_pred):
     y_pred = torch.argmax(y_pred, axis=-1)
@@ -38,38 +39,33 @@ tgt_dataset = data.MyDataset(path=tgt_domain_dir,
                         label2index=label2index)
 
 config.classes = len(src_dataset.label2index)
-# n = len(dataset)
-# n_train = int(n*0.8)
-# n_test = n - n_train
-# train_ds, test_ds = torch.utils.data.random_split(dataset, [n_train, n_test])
-print('src:', len(src_dataset))
-print('tgt:', len(tgt_dataset))
+print('src size:', len(src_dataset))
+print('tgt size:', len(tgt_dataset))
 
-src_dataloader = torch.utils.data.DataLoader(src_dataset, batch_size=config.batch_size, shuffle=True, num_workers=2)
-tgt_dataloader = torch.utils.data.DataLoader(tgt_dataset, batch_size=config.batch_size, shuffle=True, num_workers=2)
+src_dataloader = torch.utils.data.DataLoader(src_dataset, batch_size=config.batch_size, shuffle=True, num_workers=2, drop_last=True)
+tgt_dataloader = torch.utils.data.DataLoader(tgt_dataset, batch_size=config.batch_size, shuffle=True, num_workers=2, drop_last=True)
 
 print('train batchs:', len(src_dataloader))
 print('test batchs:', len(tgt_dataloader))
 src_dis_labels = torch.zeros(config.batch_size, dtype=torch.long)
 tgt_dis_labels = torch.ones(config.batch_size, dtype=torch.long)
-# dis_src_labels = torch.cat([vec_ones, vec_zeros], dim=-1)
-# dis_tgt_labels = torch.cat([vec_zeros, vec_ones], dim=-1)
 
 print('Initializing network ...')
 net = Net(config)
-criterion_label = torch.nn.CrossEntropyLoss() # use a Classification Cross-Entropy loss
-criterion_domain = torch.nn.CrossEntropyLoss() # use a Classification Cross-Entropy loss
-optimizer_A = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-optimizer_F = torch.optim.SGD(net.feature_extractor.parameters(), lr=0.001, momentum=0.9)
-optimizer_D = torch.optim.SGD(net.adversarial_classifier.parameters(), lr=0.001, momentum=0.9)
+criterion_label = torch.nn.CrossEntropyLoss() 
+criterion_domain = torch.nn.CrossEntropyLoss() 
+# optimizer_F = torch.optim.SGD(net.feature_extractor.parameters(), lr=0.001, momentum=0.9)
+# optimizer_D = torch.optim.SGD(net.adversarial_classifier.parameters(), lr=0.001, momentum=0.9)
+optimizer_F = torch.optim.Adam(net.feature_extractor.parameters())
+optimizer_D = torch.optim.Adam(net.adversarial_classifier.parameters())
 
 print('Starting training...')
+clock_epoch = Clock(config.epochs)
 for epoch in range(config.epochs):
-    running_loss = 0.0
     step = 0
-    for src_data, tgt_data in zip(cycle(src_dataloader), tgt_dataloader):
-        step += 1
-        print('Epoch {}/{} Batch {}/{}'.format(epoch, config.epochs, step, len(src_dataloader)))
+    clock_batch = Clock(len(src_dataloader))
+    for src_data, tgt_data in zip(src_dataloader, cycle(tgt_dataloader)):
+        print('  Epoch {}/{}  Batch {}/{}'.format(epoch+1, config.epochs, step+1, len(src_dataloader)))
         src_inputs, src_labels = src_data
         tgt_inputs, tgt_labels = tgt_data
         src_inputs = torch.autograd.Variable(src_inputs)
@@ -100,7 +96,11 @@ for epoch in range(config.epochs):
         tgt_acc_dm = accuracy(tgt_dis_labels, tgt_y_domain)
 #         if (i+1) % 1 == 0: 
         # print('Epoch {} Batch {} acc: {} {} loss: {} {} {}'.format(epoch+1, step, acc_lb, acc_dm, losslb, lossdm))
-        print('  acc_label {} {} acc_domain {} {}'.format(src_acc_lb, tgt_acc_lb, src_acc_dm, tgt_acc_dm))
-        print('  loss_label {} loss_domain {} {}'.format(src_loss_label, tgt_loss_dm, src_loss_dm, tgt_loss_dm))
-#             running_loss = 0.0
+        print('\tacc_label {} {}  acc_domain {} {}'.format(src_acc_lb, tgt_acc_lb, src_acc_dm, tgt_acc_dm))
+        print('\tloss_label {:.6f}  loss_domain {:.6f} {:.6f}'.format(src_loss_label, tgt_loss_dm, src_loss_dm, tgt_loss_dm))
+        tm = clock_batch.toc(step)
+        print('\tElapsed {}  ETA {}'.format(*tm))
+        step += 1
+    tm = clock_epoch.toc(epoch)
+    print('  Elapsed {}  ETA {}'.format(*tm))
 print('Finished Training')
