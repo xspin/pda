@@ -26,7 +26,7 @@ def get_label_image_path(directory, labels=None):
     img_labels = []
     for lb in labels:
         label_dir = os.path.join(directory,lb)
-        assert os.path.exists(label_dir), 'Not found label `%s`.' % lb
+        assert os.path.exists(label_dir), 'Not found label `%s` in %s' % (lb, directory)
         paths = get_image_path(label_dir)
         img_paths.extend(paths)
         img_labels.extend([lb]*len(paths))
@@ -45,6 +45,18 @@ class MyDataset(Dataset):
 
     def __len__(self):
         return len(self.image_files)
+
+shared_classes = [
+    'back_pack', 
+    'bike', 
+    'calculator', 
+    'headphones', 
+    'keyboard', 
+    'laptop_computer', 
+    'monitor', 
+    'mouse', 
+    'mug', 
+    'projector']
 
 if __name__ == "__main__":
     amazon_dir = 'datasets/office31/amazon/images'

@@ -169,7 +169,7 @@ class AdversarialNetwork(nn.Module):
 
 import utils
 class AdversarialClassifier(nn.Module):
-    def __init__(self, n_output):
+    def __init__(self, in_feature, n_output):
         super(AdversarialClassifier, self).__init__()
         self.network = nn.Sequential(
             nn.Linear(in_feature, 1024),
@@ -215,7 +215,7 @@ class Net(nn.Module):
     def __init__(self, config):
         super(Net, self).__init__()
         self.feature_extractor = ResNet50Fc()
-        self.ac = AdversarialClassifier(config.classes*2)
+        self.adversarial_classifier = AdversarialClassifier(self.feature_extractor.output_num(), config.classes*2)
         # classifier_output_dim = config.classes 
         # self.classifier = CLS(self.feature_extractor.output_num(), classifier_output_dim, bottle_neck_dim=256)
         # self.discriminator = AdversarialNetwork(256)
@@ -232,19 +232,11 @@ class Net(nn.Module):
 
     def forward(self, x):
         f = self.feature_extractor(x)
-        # f, g, __, y = self.classifier(f)
-        # d = self.discriminator(g)
-        # y_aug, d_aug = self.classifier_auxiliary(g)
-        # return y, d, y_aug, d_aug
-        y_ = self.ac(f)
-        # ys, yt = torch.split(y, split_size_or_sections=2, dim=-1)
-        y_ = y_.view(y_.shape[0], 2, -1)
-        ys = y_[:,0,:]
-        yt = y_[:,1,:]
-        ps = ys.sum(dim=-1)
-        pt = yt.sum(dim=-1)
-        y = ys+yt
-        return y, ps, pt
+        y = self.adversarial_classifier(f)
+        y = y.view(y.shape[0], -1, 2)
+        y_domain = y.sum(dim=-2) # ys,yt
+        y_label = y.sum(dim=-1)
+        return y_label, y_domain
 
 
 if __name__ == "__main__":
