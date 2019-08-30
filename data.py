@@ -46,6 +46,11 @@ class MyDataset(Dataset):
     def __len__(self):
         return len(self.image_files)
 
+dataset_amazon_dir = 'datasets/office31/amazon/images'
+dataset_dslr_dir = 'datasets/office31/dslr/images'
+dataset_webcam_dir = 'datasets/office31/webcam/images'
+dataset_dir = {'amazon': dataset_amazon_dir, 'dslr': dataset_dslr_dir, 'webcam': dataset_webcam_dir}
+
 shared_classes = [
     'back_pack', 
     'bike', 

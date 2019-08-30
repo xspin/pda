@@ -7,26 +7,23 @@ import numpy as np
 from itertools import cycle
 from timer import Clock
 
+# todo implement GPU computation
+
 def accuracy(y_true, y_pred):
     y_pred = torch.argmax(y_pred, axis=-1)
     return torch.sum(torch.eq(y_true, y_pred), dtype=torch.float)/len(y_true)
 
-dataset_amazon_dir = 'datasets/office31/amazon/images'
-dataset_dslr_dir = 'datasets/office31/dslr/images'
-dataset_webcam_dir = 'datasets/office31/webcam/images'
-dataset_dir = {'amazon': dataset_amazon_dir, 'dslr': dataset_dslr_dir, 'webcam': dataset_webcam_dir}
 
-#! Modify here to change the source and target domain
-src_domain_name = 'amazon'
-tgt_domain_name = 'dslr'
-
+#* Modify here to change the source and target domain, and also other configs
+config.src_domain_name = 'amazon'
+config.tgt_domain_name = 'dslr'
 config.epochs = 3
 config.batch_size = 16
 config.base_model = 'resnet'
 config.image_size = (256, 256)
 
-src_domain_dir = dataset_dir[src_domain_name]
-tgt_domain_dir = dataset_dir[tgt_domain_name]
+src_domain_dir = data.dataset_dir[config.src_domain_name]
+tgt_domain_dir = data.dataset_dir[config.tgt_domain_name]
 
 transform = torchvision.transforms.Compose([
     torchvision.transforms.Resize(config.image_size),
