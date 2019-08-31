@@ -150,9 +150,9 @@ class Net(nn.Module):
     def forward(self, x):
         f = self.feature_extractor(x)
         y = self.adversarial_classifier(f)
-        y = y.view(y.shape[0], -1, 2)
-        y_domain = y.sum(dim=-2) # ys,yt
-        y_label = y.sum(dim=-1)
+        y = y.view(y.shape[0], 2, -1)
+        y_domain = y.sum(dim=-1) # ys,yt
+        y_label = y.sum(dim=-2)
         return y_label, y_domain
 
 

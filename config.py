@@ -7,5 +7,6 @@ class Config:
         self.base_model = 'vgg' # vgg or resnet
         self.src_domain_name = 'amazon'
         self.tgt_domain_name = 'dslr'
+        self.is_cuda = False
 
 config = Config()
