@@ -23,4 +23,8 @@ class Clock:
             return sec2hms(cost)
         else:
             step += 1
+            self.avg_time = sec2hms(cost/step)
             return sec2hms(cost), sec2hms(cost*(self.n_steps-step)/step)
+    def avg(self):
+        return self.avg_time
+

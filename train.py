@@ -6,11 +6,14 @@ import data
 import numpy as np
 from itertools import cycle
 from timer import Clock
+import logging
+LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+logging.basicConfig(filename='log.txt', level=logging.DEBUG, format=LOG_FORMAT)
 
-# todo implement GPU computation
-
-def accuracy(y_true, y_pred):
+def accuracy(y_true, y_pred, return_count=False):
     y_pred = torch.argmax(y_pred, axis=-1)
+    if return_count:
+        return torch.sum(torch.eq(y_true, y_pred), dtype=torch.float)
     return torch.sum(torch.eq(y_true, y_pred), dtype=torch.float)/len(y_true)
 
 if __name__ == "__main__":
@@ -22,6 +25,7 @@ if __name__ == "__main__":
     config.base_model = 'resnet'
     config.image_size = (256, 256)
     config.is_cuda = torch.cuda.is_available()
+    logging.info("src_domain: {}  tgt_domain: {}".format(config.src_domain_name, config.tgt_domain_name))
 
     src_domain_dir = data.dataset_dir[config.src_domain_name]
     tgt_domain_dir = data.dataset_dir[config.tgt_domain_name]
@@ -29,7 +33,12 @@ if __name__ == "__main__":
     transform = torchvision.transforms.Compose([
         torchvision.transforms.Resize(config.image_size),
         # RandomCrop(224),
-        # RandomHorizontalFlip(),
+        torchvision.transforms.RandomHorizontalFlip(),
+        torchvision.transforms.ToTensor()
+    ])
+    test_transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(config.image_size),
+        # CenterCrop(224),
         torchvision.transforms.ToTensor()
     ])
 
@@ -39,6 +48,14 @@ if __name__ == "__main__":
     tgt_dataset = data.MyDataset(path=tgt_domain_dir, 
                             labels=data.shared_classes,
                             transform=transform, 
+                            label2index=label2index)
+    src_test_dataset = data.MyDataset(path=src_domain_dir, 
+                            labels='all',
+                            transform=test_transform, 
+                            label2index=label2index)
+    tgt_test_dataset = data.MyDataset(path=tgt_domain_dir, 
+                            labels=data.shared_classes,
+                            transform=test_transform, 
                             label2index=label2index)
 
     config.classes = len(src_dataset.label2index)
@@ -57,9 +74,22 @@ if __name__ == "__main__":
                             num_workers=2, 
                             drop_last=True,
                             pin_memory=config.is_cuda)
+    src_test_dataloader = torch.utils.data.DataLoader(src_test_dataset, 
+                            batch_size=config.batch_size, 
+                            shuffle=False, 
+                            num_workers=2, 
+                            drop_last=False,
+                            pin_memory=config.is_cuda)
+    tgt_test_dataloader = torch.utils.data.DataLoader(tgt_test_dataset, 
+                            batch_size=config.batch_size, 
+                            shuffle=False, 
+                            num_workers=2, 
+                            drop_last=False,
+                            pin_memory=config.is_cuda)
 
     print('train batchs:', len(src_dataloader))
     print('test batchs:', len(tgt_dataloader))
+
     if config.is_cuda:
         src_dis_labels = torch.zeros(config.batch_size, dtype=torch.long).cuda()
         tgt_dis_labels = torch.ones(config.batch_size, dtype=torch.long).cuda()
@@ -82,10 +112,11 @@ if __name__ == "__main__":
     print('Starting training ...')
     clock_epoch = Clock(config.epochs)
     for epoch in range(config.epochs):
+        print(' Epoch {}/{}'.format(epoch+1, config.epochs))
         step = 0
         clock_batch = Clock(len(src_dataloader))
         for src_data, tgt_data in zip(src_dataloader, cycle(tgt_dataloader)):
-            print('  Epoch {}/{}  Batch {}/{}'.format(epoch+1, config.epochs, step+1, len(src_dataloader)))
+            print('    Batch {}/{}'.format(step+1, len(src_dataloader)))
             src_inputs, src_labels = src_data
             tgt_inputs, tgt_labels = tgt_data
             # src_inputs = torch.autograd.Variable(src_inputs)
@@ -96,20 +127,23 @@ if __name__ == "__main__":
             else:
                 src_inputs, src_labels = src_inputs, src_labels
                 tgt_inputs, tgt_labels = tgt_inputs, tgt_labels
-            optimizer_F.zero_grad()
             src_y_label, src_y_domain = net(src_inputs)
             tgt_y_label, tgt_y_domain = net(tgt_inputs)
             src_loss_label = criterion_label(src_y_label, src_labels)
             # tgt_loss_label = criterion_label(tgt_y_label, tgt_labels)
             src_loss_domain = criterion_domain(src_y_domain, src_dis_labels)
             tgt_loss_domain = criterion_domain(tgt_y_domain, tgt_dis_labels)
-            loss = src_loss_label - src_loss_domain - tgt_loss_domain
-            loss.backward(retain_graph=True)        
+            src_loss_domain_inv = criterion_domain(src_y_domain, tgt_dis_labels)
+            tgt_loss_domain_inv = criterion_domain(tgt_y_domain, src_dis_labels)
+            loss_F = src_loss_label + src_loss_domain_inv + tgt_loss_domain_inv
+            loss_D = src_loss_label + src_loss_domain + tgt_loss_domain
+
+            optimizer_F.zero_grad()
+            loss_F.backward(retain_graph=True)        
             optimizer_F.step()
 
             optimizer_D.zero_grad()
-            loss = src_loss_label + src_loss_domain + tgt_loss_domain
-            loss.backward()        
+            loss_D.backward()        
             optimizer_D.step()
             
             # print statistics
@@ -121,11 +155,39 @@ if __name__ == "__main__":
             src_acc_dm = accuracy(src_dis_labels, src_y_domain)
             tgt_acc_dm = accuracy(tgt_dis_labels, tgt_y_domain)
 
-            print('\tacc_label {} {}  acc_domain {} {}'.format(src_acc_lb, tgt_acc_lb, src_acc_dm, tgt_acc_dm))
-            print('\tloss_label {:.6f}  loss_domain {:.6f} {:.6f}'.format(src_loss_label, tgt_loss_dm, src_loss_dm, tgt_loss_dm))
+            print('\tacc_label {} {}  acc_domain {} {}'.format(src_acc_lb, tgt_acc_lb, src_acc_dm, tgt_acc_dm), end='  ')
+            print('loss_label {:.6f}  loss_domain {:.6f} {:.6f}'.format(src_loss_label, src_loss_dm, tgt_loss_dm))
             tm = clock_batch.toc(step)
-            print('\tElapsed {}  ETA {}'.format(*tm))
+            avgtm = clock_batch.avg()
+            print('\tElapsed {}  ETA {}  AVG {}/batch'.format(*tm, avgtm))
             step += 1
+            if step>0: break
+
+        # Testing
+        print('    Testing ...')
+        with torch.no_grad():
+            for k, dl in enumerate([tgt_test_dataloader, src_test_dataloader]):
+                test_clock = Clock()
+                cnt = 0.0
+                domain = 'tgt' if k==0 else 'src'
+                print('\t{}'.format(domain), end='  ')
+                for i, data in enumerate(dl):
+                    inputs, labels = data
+                    if config.is_cuda:
+                        inputs, labels = inputs.cuda(), labels.cuda()
+                    else:
+                        inputs, labels = inputs, labels
+                    y_label, y_domain = net(inputs)
+                    cnt += accuracy(labels, y_label, return_count=True)
+                    if (i+1)%(len(dl)//10)==0:
+                        progress = (i+1.0)/len(dl)*100
+                        print('{:.0f}%'.format(progress), end=' ', flush=True)
+                print()
+                acc = cnt/len(dl)
+                tm = test_clock.toc()
+                print('  {}_acc  {:.4f}  Elapsed {}'.format(domain, acc, tm))
+                logging.info('{}_acc {}'.format(domain, acc))
+
         tm = clock_epoch.toc(epoch)
         print('  Elapsed {}  ETA {}'.format(*tm))
     print('Finished Training')
