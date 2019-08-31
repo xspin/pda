@@ -1,1 +1,12 @@
 2019-08-31 16:06:44,528 - INFO - tgt_acc 0.30000001192092896
+2019-08-31 16:14:47,568 - INFO - src_domain: amazon  tgt_domain: dslr
+2019-08-31 16:14:47,568 - INFO - base_model: resnet
+2019-08-31 16:15:47,081 - INFO - tgt_acc 0.125
+2019-08-31 16:18:43,098 - INFO - image_size: (256, 256)
+2019-08-31 16:18:43,098 - INFO - batch_size: 4
+2019-08-31 16:18:43,098 - INFO - epochs: 3
+2019-08-31 16:18:43,098 - INFO - classes: 31
+2019-08-31 16:18:43,098 - INFO - base_model: resnet
+2019-08-31 16:18:43,098 - INFO - src_domain_name: amazon
+2019-08-31 16:18:43,098 - INFO - tgt_domain_name: dslr
+2019-08-31 16:18:43,098 - INFO - is_cuda: False

@@ -8,7 +8,7 @@ from itertools import cycle
 from timer import Clock
 import logging
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-logging.basicConfig(filename='log.txt', level=logging.DEBUG, format=LOG_FORMAT)
+logging.basicConfig(filename='log.txt', level=logging.INFO, format=LOG_FORMAT)
 
 def accuracy(y_true, y_pred, return_count=False):
     y_pred = torch.argmax(y_pred, axis=-1)
@@ -25,7 +25,11 @@ if __name__ == "__main__":
     config.base_model = 'resnet'
     config.image_size = (256, 256)
     config.is_cuda = torch.cuda.is_available()
-    logging.info("src_domain: {}  tgt_domain: {}".format(config.src_domain_name, config.tgt_domain_name))
+
+    logging.info('==== config start ====')
+    for param in config.__dict__.items():
+        logging.info('{}: {}'.format(*param))
+    logging.info('==== config end ====')
 
     src_domain_dir = data.dataset_dir[config.src_domain_name]
     tgt_domain_dir = data.dataset_dir[config.tgt_domain_name]
@@ -160,8 +164,6 @@ if __name__ == "__main__":
             tm = clock_batch.toc(step)
             avgtm = clock_batch.avg()
             print('\tElapsed {}  ETA {}  AVG {}/batch'.format(*tm, avgtm))
-            step += 1
-            if step>0: break
 
         # Testing
         print('    Testing ...')
@@ -185,7 +187,7 @@ if __name__ == "__main__":
                 print()
                 acc = cnt/len(dl)
                 tm = test_clock.toc()
-                print('  {}_acc  {:.4f}  Elapsed {}'.format(domain, acc, tm))
+                print('\t{}_acc  {:.4f}  Elapsed {}'.format(domain, acc, tm))
                 logging.info('{}_acc {}'.format(domain, acc))
 
         tm = clock_epoch.toc(epoch)

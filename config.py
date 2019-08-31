@@ -10,3 +10,7 @@ class Config:
         self.is_cuda = False
 
 config = Config()
+
+
+if __name__ == "__main__":
+    print(config.__dict__)
