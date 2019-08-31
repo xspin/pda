@@ -18,7 +18,7 @@ if __name__ == "__main__":
     config.src_domain_name = 'amazon'
     config.tgt_domain_name = 'dslr'
     config.epochs = 3
-    config.batch_size = 8
+    config.batch_size = 4
     config.base_model = 'resnet'
     config.image_size = (256, 256)
     config.is_cuda = torch.cuda.is_available()
@@ -88,8 +88,14 @@ if __name__ == "__main__":
             print('  Epoch {}/{}  Batch {}/{}'.format(epoch+1, config.epochs, step+1, len(src_dataloader)))
             src_inputs, src_labels = src_data
             tgt_inputs, tgt_labels = tgt_data
-            src_inputs = torch.autograd.Variable(src_inputs)
-            tgt_inputs = torch.autograd.Variable(tgt_inputs)
+            # src_inputs = torch.autograd.Variable(src_inputs)
+            # tgt_inputs = torch.autograd.Variable(tgt_inputs)
+            if config.is_cuda:
+                src_inputs, src_labels = src_inputs.cuda(), src_labels.cuda()
+                tgt_inputs, tgt_labels = tgt_inputs.cuda(), tgt_labels.cuda()
+            else:
+                src_inputs, src_labels = src_inputs, src_labels
+                tgt_inputs, tgt_labels = tgt_inputs, tgt_labels
             optimizer_F.zero_grad()
             src_y_label, src_y_domain = net(src_inputs)
             tgt_y_label, tgt_y_domain = net(tgt_inputs)
